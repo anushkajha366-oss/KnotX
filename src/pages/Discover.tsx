@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { DISCOVER_PROJECTS } from "../data/mock";
+import type { SCIProject } from "../types";
 
 const PROJECT_TYPES = ["All", "Hackathon", "Startup", "College Project", "Open Source"];
 const ROLES = ["All Roles", "UI/UX Designer", "Backend Developer", "React Developer", "Product Designer", "ML Engineer", "Frontend Developer"];
 
-export default function Discover() {
+interface DiscoverProps {
+  onViewMatch: (project: SCIProject) => void;
+}
+
+export default function Discover({ onViewMatch }: DiscoverProps) {
   const [query, setQuery] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const [selectedRole, setSelectedRole] = useState("All Roles");
@@ -110,7 +115,7 @@ export default function Discover() {
         {/* Project cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard key={project.id} project={project} onViewMatch={onViewMatch} />
           ))}
           {filtered.length === 0 && (
             <div className="col-span-full text-center py-16">
@@ -128,7 +133,13 @@ export default function Discover() {
   );
 }
 
-function ProjectCard({ project }: { project: (typeof DISCOVER_PROJECTS)[0] }) {
+function ProjectCard({
+  project,
+  onViewMatch,
+}: {
+  project: (typeof DISCOVER_PROJECTS)[0];
+  onViewMatch: (project: SCIProject) => void;
+}) {
   const [hovered, setHovered] = useState(false);
 
   const sciColor = project.sci >= 70 ? "#7EF0C5" : project.sci >= 60 ? "#C084FC" : "#FF5F5F";
@@ -210,6 +221,13 @@ function ProjectCard({ project }: { project: (typeof DISCOVER_PROJECTS)[0] }) {
       </div>
 
       <button
+        onClick={() =>
+          onViewMatch({
+            requiredRoles: project.needs ? [project.needs] : [],
+            tags: project.tags,
+            description: project.description,
+          })
+        }
         className="w-full py-2.5 rounded-xl text-xs font-bold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5F5F]"
         style={{
           background: hovered ? "rgba(255,95,95,0.15)" : "rgba(255,247,232,0.05)",
