@@ -75,7 +75,7 @@ function askKnotXApi(apiKey: string | undefined): Plugin {
             return
           }
 
-          const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent', {
+          const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -115,7 +115,19 @@ function askKnotXApi(apiKey: string | undefined): Plugin {
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ analysis }))
         } catch (error) {
-          next(error)
+          console.error('Ask KnotX API error:', error)
+
+          res.statusCode = 500
+          res.setHeader('Content-Type', 'application/json')
+
+          res.end(
+            JSON.stringify({
+              error:
+                error instanceof Error
+                  ? error.message
+                  : 'KnotX could not complete the analysis.',
+            })
+          )
         }
       })
     },
