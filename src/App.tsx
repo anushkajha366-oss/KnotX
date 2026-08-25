@@ -6,13 +6,14 @@ import Navbar from "./components/Navbar";
 import Toast from "./components/Toast";
 import MatchWorkspace from "./pages/MatchWorkspace";
 import Discover from "./pages/Discover";
-import CreateSearch from "./pages/CreateSearch";
+import CreateSearch, { type FormState } from "./pages/CreateSearch";
 import MyTeam from "./pages/MyTeam";
 
 export default function App() {
   const [page, setPage] = useState<Page>("match");
   const [knottedIds, setKnottedIds] = useState<string[]>([]);
   const [candidateIndex, setCandidateIndex] = useState(0);
+  const [activeProject, setActiveProject] = useState<FormState | null>(null);
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({
     visible: false,
     message: "",
@@ -50,7 +51,8 @@ export default function App() {
     setCandidateIndex(0);
   }, []);
 
-  const handleAnalyze = useCallback(() => {
+  const handleAnalyze = useCallback((project: FormState) => {
+    setActiveProject(project);
     setPage("match");
   }, []);
 
