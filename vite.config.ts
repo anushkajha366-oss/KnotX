@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),
       figmaMakeKitPlugin({ storiesGlob: '/src/**/*.stories.{ts,tsx,js,jsx}' }),
-      askKnotXApi(serverEnv.OPENAI_API_KEY),
+      askKnotXApi(serverEnv.GEMINI_API_KEY),
     ],
     resolve: {
       alias: {
@@ -75,34 +75,45 @@ function askKnotXApi(apiKey: string | undefined): Plugin {
             return
           }
 
-          const response = await fetch('https://api.openai.com/v1/responses', {
+          const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${apiKey}`,
+              'x-goog-api-key': apiKey,
             },
             body: JSON.stringify({
-              model: 'gpt-5-mini',
-              store: false,
-              max_output_tokens: 500,
-              instructions: [
-                'You are KnotX Team Intelligence.',
-                'Analyze only the supplied project and team data. Do not assume facts not present in the context.',
-                'Give a concise response with these headings: Overall assessment, Biggest strength, Most important gap, Actionable recommendation, and Next teammate or skill (only if relevant).',
-              ].join(' '),
-              input: `Selected question: ${requestBody.question}\n\nLive KnotX context:\n${JSON.stringify(requestBody.context)}`,
+              systemInstruction: {
+                parts: [{
+                  text: [
+                    'You are KnotX Team Intelligence.',
+                    'Analyze only the supplied project and team data. Do not assume facts not present in the context.',
+                    'Give a concise response with these headings: Overall assessment, Biggest strength, Most important gap, Actionable recommendation, and Next teammate or skill (only if relevant).',
+                  ].join(' '),
+                }],
+              },
+              contents: [{
+                role: 'user',
+                parts: [{ text: `Selected question: ${requestBody.question}\n\nLive KnotX context:\n${JSON.stringify(requestBody.context)}` }],
+              }],
+              generationConfig: { maxOutputTokens: 500 },
             }),
           })
-          const payload = await response.json() as { output_text?: string; error?: { message?: string } }
+          const payload = await response.json() as {
+            candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+            error?: { message?: string }
+          }
+          const analysis = payload.candidates?.[0]?.content?.parts
+            ?.map((part) => part.text ?? '')
+            .join('')
 
-          if (!response.ok || !payload.output_text) {
+          if (!response.ok || !analysis) {
             res.statusCode = 502
             res.end(JSON.stringify({ error: payload.error?.message ?? 'KnotX could not complete the analysis.' }))
             return
           }
 
           res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ analysis: payload.output_text }))
+          res.end(JSON.stringify({ analysis }))
         } catch (error) {
           next(error)
         }
