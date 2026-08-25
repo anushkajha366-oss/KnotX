@@ -6,6 +6,7 @@ import RippleEffect from "./RippleEffect";
 
 interface CandidateCardProps {
   candidate: Candidate;
+  matchScore: number;
   teamState: TeamState;
   total: number;
   current: number;
@@ -16,6 +17,7 @@ interface CandidateCardProps {
 
 export default function CandidateCard({
   candidate,
+  matchScore,
   teamState,
   total,
   current,
@@ -153,7 +155,7 @@ export default function CandidateCard({
                 </p>
                 <div className="flex items-end gap-2">
                   <span className="text-5xl font-bold tabular-nums leading-none" style={{ color: "#FF5F5F" }}>
-                    {candidate.sci}
+                    {matchScore}
                   </span>
                   <span className="text-xl pb-0.5" style={{ color: "rgba(255,95,95,0.5)" }}>%</span>
                 </div>
