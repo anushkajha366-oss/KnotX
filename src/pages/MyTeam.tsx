@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ArrowLeft, Printer, Shield, TrendingUp, AlertTriangle, Sparkles, UserRoundX, ArrowRightLeft } from "lucide-react";
+import { ArrowLeft, Printer, Shield, TrendingUp, AlertTriangle, Sparkles, UserRoundX, ArrowRightLeft, MessageCircle, CheckCircle2 } from "lucide-react";
 import type { SCIProject, TeamState, SkillKey, TeamMember } from "../types";
 import { computeTeamState, getBiggestGap, getCriticalGap, rankReserveCandidates } from "../data/mock";
+import { ASK_KNOTX_QUESTIONS, prepareKnotXContext, type AskKnotXQuestion, type PreparedKnotXContext } from "../data/askKnotX";
 import SkillBar from "../components/SkillBar";
 
 interface MyTeamProps {
@@ -451,6 +452,8 @@ interface TeamDeckProps {
 }
 
 function TeamDeck({ teamState, activeProject, onClose }: TeamDeckProps) {
+  const [askOpen, setAskOpen] = useState(false);
+  const [preparedContext, setPreparedContext] = useState<PreparedKnotXContext | null>(null);
   const projectName = activeProject?.name ?? "Neural Nexus";
   const projectDescription = activeProject?.description;
   const requirements = [
@@ -462,6 +465,9 @@ function TeamDeck({ teamState, activeProject, onClose }: TeamDeckProps) {
   );
   const gap = getCriticalGap(teamState.members, teamState.coverage, activeProject);
   const summary = `${projectName} is supported by ${teamState.members.length} team member${teamState.members.length === 1 ? "" : "s"} with strongest coverage in ${strongest[0]}. With an SCI of ${teamState.sci}, the next focus is ${gap.label}.`;
+  const prepareQuestion = (question: AskKnotXQuestion) => {
+    setPreparedContext(prepareKnotXContext(question, teamState, activeProject, MEMBER_SKILLS));
+  };
 
   return (
     <div className="min-h-screen pt-20 pb-12 px-4 sm:px-6">
@@ -482,6 +488,14 @@ function TeamDeck({ teamState, activeProject, onClose }: TeamDeckProps) {
           >
             <Printer size={15} />
             Print / Save as PDF
+          </button>
+          <button
+            onClick={() => { setPreparedContext(null); setAskOpen(true); }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7EF0C5]"
+            style={{ background: "rgba(126,240,197,0.12)", color: "#7EF0C5", border: "1px solid rgba(126,240,197,0.28)" }}
+          >
+            <MessageCircle size={15} />
+            Ask KnotX
           </button>
         </div>
 
@@ -575,6 +589,112 @@ function TeamDeck({ teamState, activeProject, onClose }: TeamDeckProps) {
             </div>
           </div>
         </section>
+      </div>
+
+      {askOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-8" style={{ background: "rgba(12,9,18,0.82)", backdropFilter: "blur(8px)" }}>
+          <div className="max-w-4xl mx-auto rounded-3xl p-6 sm:p-8 space-y-6" style={{ background: "#211A2D", border: "1px solid rgba(126,240,197,0.25)", boxShadow: "0 0 60px rgba(126,240,197,0.08)" }}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 text-[10px] font-bold tracking-widest uppercase mb-3" style={{ color: "#7EF0C5" }}>
+                  <MessageCircle size={12} />
+                  Team analysis workspace
+                </div>
+                <h2 className="text-2xl font-bold" style={{ color: "#FFF7E8" }}>Ask KnotX</h2>
+                <p className="text-sm mt-2" style={{ color: "#9B91A8" }}>Review the live context KnotX will analyze, then prepare a question for a future AI connection.</p>
+              </div>
+              <button onClick={() => setAskOpen(false)} className="text-sm font-semibold" style={{ color: "#9B91A8" }}>Close</button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ContextCard label="Active project">
+                <p className="font-bold" style={{ color: "#FFF7E8" }}>{projectName}</p>
+                <p className="mt-1" style={{ color: "#9B91A8" }}>{projectDescription}</p>
+              </ContextCard>
+              <ContextCard label="Current Team SCI">
+                <p className="text-3xl font-bold" style={{ color: "#C084FC" }}>{teamState.sci}<span className="text-base" style={{ color: "#9B91A8" }}> / 100</span></p>
+                <p className="mt-1" style={{ color: "#9B91A8" }}>Live Skill Complementarity Index</p>
+              </ContextCard>
+              <ContextCard label="Requirements">
+                <ContextTags label="Required roles" values={activeProject?.requiredRoles ?? []} />
+                <ContextTags label="Required skills" values={activeProject?.requiredSkills ?? []} />
+              </ContextCard>
+              <ContextCard label="Team outlook">
+                <p style={{ color: "#7EF0C5" }}>Strength: {strongest[0]} ({strongest[1]}% coverage)</p>
+                <p className="mt-2" style={{ color: "#FF5F5F" }}>Remaining gap: {gap.label}</p>
+                <p className="mt-1" style={{ color: "#9B91A8" }}>{gap.insight}</p>
+              </ContextCard>
+            </div>
+
+            <div className="rounded-2xl p-5" style={{ background: "rgba(255,247,232,0.04)", border: "1px solid rgba(255,247,232,0.08)" }}>
+              <p className="text-[10px] font-bold tracking-widest uppercase mb-4" style={{ color: "#9B91A8" }}>Live skill coverage</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {SKILL_KEYS.map((skill) => (
+                  <div key={skill} className="rounded-xl p-3" style={{ background: "rgba(192,132,252,0.07)" }}>
+                    <p className="text-xs" style={{ color: "#9B91A8" }}>{skill}</p>
+                    <p className="text-lg font-bold mt-1" style={{ color: "#FFF7E8" }}>{teamState.coverage[skill]}%</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase mb-3" style={{ color: "#9B91A8" }}>Current team</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {teamState.members.map((member) => (
+                  <div key={member.id} className="rounded-xl p-4" style={{ background: "rgba(255,247,232,0.04)", border: "1px solid rgba(255,247,232,0.08)" }}>
+                    <p className="text-sm font-bold" style={{ color: "#FFF7E8" }}>{member.name}</p>
+                    <p className="text-xs mt-1" style={{ color: "#9B91A8" }}>{member.role}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {(MEMBER_SKILLS[member.id] ?? []).map((skill) => <span key={skill} className="px-2 py-0.5 rounded-full text-[10px]" style={{ background: "rgba(192,132,252,0.12)", color: "#C084FC" }}>{skill}</span>)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase mb-3" style={{ color: "#9B91A8" }}>Choose an analysis action</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {ASK_KNOTX_QUESTIONS.map((question) => (
+                  <button key={question} onClick={() => prepareQuestion(question)} className="text-left rounded-xl p-4 transition-colors" style={{ background: preparedContext?.question === question ? "rgba(126,240,197,0.12)" : "rgba(255,247,232,0.04)", border: `1px solid ${preparedContext?.question === question ? "rgba(126,240,197,0.4)" : "rgba(255,247,232,0.08)"}`, color: "#FFF7E8" }}>
+                    <p className="text-sm font-semibold">{question}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {preparedContext && (
+              <div className="rounded-2xl p-5 flex items-start gap-3" style={{ background: "rgba(126,240,197,0.07)", border: "1px solid rgba(126,240,197,0.22)" }}>
+                <CheckCircle2 size={18} style={{ color: "#7EF0C5", flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <p className="text-sm font-bold" style={{ color: "#FFF7E8" }}>Analysis context prepared</p>
+                  <p className="text-xs mt-1" style={{ color: "#9B91A8" }}>“{preparedContext.question}” is ready with this live project and team snapshot. AI analysis is not connected yet.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContextCard({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl p-5" style={{ background: "rgba(255,247,232,0.04)", border: "1px solid rgba(255,247,232,0.08)" }}>
+      <p className="text-[10px] font-bold tracking-widest uppercase mb-3" style={{ color: "#9B91A8" }}>{label}</p>
+      <div className="text-xs leading-relaxed">{children}</div>
+    </div>
+  );
+}
+
+function ContextTags({ label, values }: { label: string; values: readonly string[] }) {
+  return (
+    <div className="mb-3 last:mb-0">
+      <p className="text-xs mb-1.5" style={{ color: "#9B91A8" }}>{label}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {values.length > 0 ? values.map((value) => <span key={value} className="px-2 py-0.5 rounded-full text-[10px]" style={{ background: "rgba(192,132,252,0.12)", color: "#C084FC" }}>{value}</span>) : <span style={{ color: "#FFF7E8" }}>None specified</span>}
       </div>
     </div>
   );
