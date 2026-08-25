@@ -123,7 +123,10 @@ function toSCIProject(): SCIProject {
   };
 }
 
-export function computeTeamState(knottedIds: string[]): TeamState {
+export function computeTeamState(
+  knottedIds: string[],
+  project: SCIProject = toSCIProject()
+): TeamState {
   const coverage = { ...INITIAL_COVERAGE } as Record<SkillKey, number>;
 
   for (const id of CANDIDATES.map((c) => c.id)) {
@@ -142,7 +145,7 @@ export function computeTeamState(knottedIds: string[]): TeamState {
 
   const sci = calculateSCI(
     { members: members.map(toSCIPerson), coverage },
-    toSCIProject()
+    project
   );
 
   return { members, coverage, sci, knottedIds };
