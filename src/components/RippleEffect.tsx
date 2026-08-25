@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import type { Candidate, SkillKey } from "../types";
 import type { TeamState } from "../types";
+import { computeTeamState } from "../data/mock";
 
 interface RippleEffectProps {
   candidate: Candidate;
@@ -19,10 +20,11 @@ export default function RippleEffect({ candidate, teamState, onClose }: RippleEf
     return () => clearTimeout(t);
   }, []);
 
+  const predictedTeamState = computeTeamState([...teamState.knottedIds, candidate.id]);
   const coverageBefore = teamState.coverage;
-  const coverageAfter = { ...coverageBefore, ...candidate.ripple.coverageAfter };
+  const coverageAfter = predictedTeamState.coverage;
   const sciBefore = teamState.sci;
-  const sciAfter = candidate.ripple.sciAfter;
+  const sciAfter = predictedTeamState.sci;
   const sciDelta = sciAfter - sciBefore;
 
   return (
