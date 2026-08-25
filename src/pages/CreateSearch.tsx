@@ -11,7 +11,7 @@ const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced", "Mixed"];
 const AVAILABILITY_OPTIONS = ["< 5 hrs/week", "5–10 hrs/week", "10–20 hrs/week", "Full-time"];
 const DURATION_OPTIONS = ["24–48 hours (Hackathon)", "1–4 weeks", "1–3 months", "3–6 months", "6+ months"];
 
-interface FormState {
+export interface FormState {
   projectName: string;
   projectType: string;
   description: string;
@@ -25,7 +25,7 @@ interface FormState {
 }
 
 interface CreateSearchProps {
-  onAnalyze: () => void;
+  onAnalyze: (form: FormState) => void;
 }
 
 export default function CreateSearch({ onAnalyze }: CreateSearchProps) {
@@ -452,7 +452,7 @@ export default function CreateSearch({ onAnalyze }: CreateSearchProps) {
               </button>
             ) : (
               <button
-                onClick={onAnalyze}
+                onClick={() => onAnalyze(form)}
                 className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5F5F]"
                 style={{
                   background: "rgba(255,95,95,0.9)",
