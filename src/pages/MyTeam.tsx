@@ -454,6 +454,9 @@ interface TeamDeckProps {
 function TeamDeck({ teamState, activeProject, onClose }: TeamDeckProps) {
   const [askOpen, setAskOpen] = useState(false);
   const [preparedContext, setPreparedContext] = useState<PreparedKnotXContext | null>(null);
+  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
   const projectName = activeProject?.name ?? "Neural Nexus";
   const projectDescription = activeProject?.description;
   const requirements = [
@@ -465,8 +468,29 @@ function TeamDeck({ teamState, activeProject, onClose }: TeamDeckProps) {
   );
   const gap = getCriticalGap(teamState.members, teamState.coverage, activeProject);
   const summary = `${projectName} is supported by ${teamState.members.length} team member${teamState.members.length === 1 ? "" : "s"} with strongest coverage in ${strongest[0]}. With an SCI of ${teamState.sci}, the next focus is ${gap.label}.`;
-  const prepareQuestion = (question: AskKnotXQuestion) => {
-    setPreparedContext(prepareKnotXContext(question, teamState, activeProject, MEMBER_SKILLS));
+  const prepareQuestion = async (question: AskKnotXQuestion) => {
+    const context = prepareKnotXContext(question, teamState, activeProject, MEMBER_SKILLS);
+    setPreparedContext(context);
+    setAnalysis(null);
+    setAnalysisError(null);
+    setAnalysisLoading(true);
+
+    try {
+      const response = await fetch('/api/ask-knotx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, context }),
+      });
+      const result = await response.json() as { analysis?: string; error?: string };
+      if (!response.ok || !result.analysis) {
+        throw new Error(result.error ?? 'KnotX could not complete the analysis.');
+      }
+      setAnalysis(result.analysis);
+    } catch (error) {
+      setAnalysisError(error instanceof Error ? error.message : 'KnotX could not complete the analysis.');
+    } finally {
+      setAnalysisLoading(false);
+    }
   };
 
   return (
@@ -490,7 +514,7 @@ function TeamDeck({ teamState, activeProject, onClose }: TeamDeckProps) {
             Print / Save as PDF
           </button>
           <button
-            onClick={() => { setPreparedContext(null); setAskOpen(true); }}
+            onClick={() => { setPreparedContext(null); setAnalysis(null); setAnalysisError(null); setAskOpen(true); }}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7EF0C5]"
             style={{ background: "rgba(126,240,197,0.12)", color: "#7EF0C5", border: "1px solid rgba(126,240,197,0.28)" }}
           >
@@ -668,9 +692,23 @@ function TeamDeck({ teamState, activeProject, onClose }: TeamDeckProps) {
               <div className="rounded-2xl p-5 flex items-start gap-3" style={{ background: "rgba(126,240,197,0.07)", border: "1px solid rgba(126,240,197,0.22)" }}>
                 <CheckCircle2 size={18} style={{ color: "#7EF0C5", flexShrink: 0, marginTop: 1 }} />
                 <div>
-                  <p className="text-sm font-bold" style={{ color: "#FFF7E8" }}>Analysis context prepared</p>
-                  <p className="text-xs mt-1" style={{ color: "#9B91A8" }}>“{preparedContext.question}” is ready with this live project and team snapshot. AI analysis is not connected yet.</p>
+                  <p className="text-sm font-bold" style={{ color: "#FFF7E8" }}>{analysisLoading ? 'KnotX is analyzing your team...' : 'Analysis context prepared'}</p>
+                  <p className="text-xs mt-1" style={{ color: "#9B91A8" }}>“{preparedContext.question}” is using this live project and team snapshot.</p>
                 </div>
+              </div>
+            )}
+
+            {analysisError && (
+              <div className="rounded-2xl p-5" style={{ background: "rgba(255,95,95,0.07)", border: "1px solid rgba(255,95,95,0.22)" }}>
+                <p className="text-sm font-bold" style={{ color: "#FF5F5F" }}>KnotX analysis failed</p>
+                <p className="text-xs mt-1" style={{ color: "#9B91A8" }}>{analysisError}</p>
+              </div>
+            )}
+
+            {analysis && (
+              <div className="rounded-2xl p-5" style={{ background: "rgba(192,132,252,0.07)", border: "1px solid rgba(192,132,252,0.22)" }}>
+                <p className="text-[10px] font-bold tracking-widest uppercase mb-3" style={{ color: "#C084FC" }}>KnotX analysis</p>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "#FFF7E8" }}>{analysis}</p>
               </div>
             )}
           </div>

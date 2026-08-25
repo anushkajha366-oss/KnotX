@@ -1,4 +1,5 @@
-import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type HtmlTagDescriptor, type Plugin } from 'vite'
+import type { IncomingMessage } from 'node:http'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
@@ -7,6 +8,7 @@ import siteConfiguration from './.figma/make/site.json'
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  const serverEnv = loadEnv(mode, process.cwd(), '')
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
 
@@ -23,6 +25,7 @@ export default defineConfig(({ mode }) => {
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),
       figmaMakeKitPlugin({ storiesGlob: '/src/**/*.stories.{ts,tsx,js,jsx}' }),
+      askKnotXApi(serverEnv.OPENAI_API_KEY),
     ],
     resolve: {
       alias: {
@@ -41,6 +44,81 @@ export default defineConfig(({ mode }) => {
     },
   }
 })
+
+function askKnotXApi(apiKey: string | undefined): Plugin {
+  return {
+    name: 'ask-knotx-api',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/api/ask-knotx', async (req, res, next) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405
+          res.setHeader('Allow', 'POST')
+          res.end(JSON.stringify({ error: 'Method not allowed.' }))
+          return
+        }
+
+        if (!apiKey) {
+          res.statusCode = 500
+          res.end(JSON.stringify({ error: 'Ask KnotX is not configured on this server.' }))
+          return
+        }
+
+        try {
+          const requestBody = JSON.parse(await readRequestBody(req)) as {
+            question?: unknown
+            context?: unknown
+          }
+          if (typeof requestBody.question !== 'string' || !requestBody.context) {
+            res.statusCode = 400
+            res.end(JSON.stringify({ error: 'A question and team context are required.' }))
+            return
+          }
+
+          const response = await fetch('https://api.openai.com/v1/responses', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: 'gpt-5-mini',
+              store: false,
+              max_output_tokens: 500,
+              instructions: [
+                'You are KnotX Team Intelligence.',
+                'Analyze only the supplied project and team data. Do not assume facts not present in the context.',
+                'Give a concise response with these headings: Overall assessment, Biggest strength, Most important gap, Actionable recommendation, and Next teammate or skill (only if relevant).',
+              ].join(' '),
+              input: `Selected question: ${requestBody.question}\n\nLive KnotX context:\n${JSON.stringify(requestBody.context)}`,
+            }),
+          })
+          const payload = await response.json() as { output_text?: string; error?: { message?: string } }
+
+          if (!response.ok || !payload.output_text) {
+            res.statusCode = 502
+            res.end(JSON.stringify({ error: payload.error?.message ?? 'KnotX could not complete the analysis.' }))
+            return
+          }
+
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({ analysis: payload.output_text }))
+        } catch (error) {
+          next(error)
+        }
+      })
+    },
+  }
+}
+
+function readRequestBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    req.on('data', (chunk: Buffer) => chunks.push(chunk))
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
+    req.on('error', reject)
+  })
+}
 
 type FigmaSiteConfiguration = {
   title?: string
