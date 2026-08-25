@@ -56,6 +56,7 @@ export default function App() {
     setKnottedIds([]);
     setCandidateIndex(0);
     setActiveProject({
+      name: project.projectName,
       requiredRoles: project.rolesNeeded,
       requiredSkills: project.skills,
       availability: project.availability,
@@ -93,7 +94,7 @@ export default function App() {
         )}
         {page === "discover" && <Discover onViewMatch={handleViewMatch} />}
         {page === "create" && <CreateSearch onAnalyze={handleAnalyze} />}
-        {page === "team" && <MyTeam teamState={teamState} />}
+        {page === "team" && <MyTeam teamState={teamState} activeProject={activeProject ?? undefined} />}
       </main>
 
       <Toast
