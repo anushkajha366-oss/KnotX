@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { RotateCcw, Sparkles } from "lucide-react";
-import type { TeamState } from "../types";
-import { CANDIDATES, getBiggestGap } from "../data/mock";
+import type { SCIProject, TeamState } from "../types";
+import { getCriticalGap, rankCandidates } from "../data/mock";
 import TeamIntelligence from "../components/TeamIntelligence";
 import CandidateCard from "../components/CandidateCard";
 
 interface MatchWorkspaceProps {
   teamState: TeamState;
+  activeProject?: SCIProject;
   candidateIndex: number;
   onSkip: () => void;
   onKnot: (id: string) => void;
@@ -16,6 +17,7 @@ interface MatchWorkspaceProps {
 
 export default function MatchWorkspace({
   teamState,
+  activeProject,
   candidateIndex,
   onSkip,
   onKnot,
@@ -23,9 +25,10 @@ export default function MatchWorkspace({
   onViewTeam,
 }: MatchWorkspaceProps) {
   const [animating, setAnimating] = useState(false);
-  const gap = getBiggestGap(teamState.coverage);
-  const done = candidateIndex >= CANDIDATES.length;
-  const candidate = done ? null : CANDIDATES[candidateIndex];
+  const gap = getCriticalGap(teamState.members, teamState.coverage, activeProject);
+  const rankedCandidates = rankCandidates(teamState.knottedIds, activeProject);
+  const done = candidateIndex >= rankedCandidates.length;
+  const candidate = done ? null : rankedCandidates[candidateIndex];
 
   const handleSkip = () => {
     setAnimating(true);
@@ -167,12 +170,13 @@ export default function MatchWorkspace({
                   }}
                 >
                   <CandidateCard
-                    candidate={candidate}
+                    candidate={candidate.candidate}
+                    matchScore={candidate.matchScore}
                     teamState={teamState}
-                    total={CANDIDATES.length}
+                    total={rankedCandidates.length}
                     current={candidateIndex}
                     onSkip={handleSkip}
-                    onKnot={() => handleKnot(candidate.id)}
+                    onKnot={() => handleKnot(candidate.candidate.id)}
                     animating={animating}
                   />
                 </div>
