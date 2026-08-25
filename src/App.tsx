@@ -52,6 +52,8 @@ export default function App() {
   }, []);
 
   const handleAnalyze = useCallback((project: FormState) => {
+    setKnottedIds([]);
+    setCandidateIndex(0);
     setActiveProject({
       requiredRoles: project.rolesNeeded,
       requiredSkills: project.skills,
@@ -63,6 +65,8 @@ export default function App() {
   }, []);
 
   const handleViewMatch = useCallback((project: SCIProject) => {
+    setKnottedIds([]);
+    setCandidateIndex(0);
     setActiveProject(project);
     setPage("match");
   }, []);
@@ -77,6 +81,7 @@ export default function App() {
         {page === "match" && (
           <MatchWorkspace
             teamState={teamState}
+            activeProject={activeProject ?? undefined}
             candidateIndex={candidateIndex}
             onSkip={handleSkip}
             onKnot={handleKnot}
