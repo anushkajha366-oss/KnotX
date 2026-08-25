@@ -105,6 +105,7 @@ Frontend: 80%   Backend: 90%   AI/ML: 40%   Design: 0%   SCI: 68
 
 You see a candidate — Ananya — whose skills fill some of those gaps. Clicking **View Ripple Effect** doesn't add her to the team. Instead, KnotX computes `current team → current team + Ananya` and shows the predicted impact before any commitment is made:
 
+
 ```text
 BEFORE                 AFTER
 
@@ -363,3 +364,12 @@ Build the right combination.
 
 Knot it together. ✦
 <img width="1920" height="1080" alt="Screenshot (344)" src="https://github.com/user-attachments/assets/6d96183a-4313-4f96-937d-6e69c85fc42c" />
+<img width="1920" height="1080" alt="Screenshot (345)" src="https://github.com/user-attachments/assets/7353830e-e61e-492b-b1e8-d0ed2476cc73" />
+<img width="1920" height="1080" alt="Screenshot (346)" src="https://github.com/user-attachments/assets/7e64d043-5f93-4c31-93bd-41718a3cddf3" />
+<img width="1920" height="1080" alt="Screenshot (347)" src="https://github.com/user-attachments/assets/9b7ccf56-8796-4b8c-9916-e205bc7f262d" />
+<img width="1920" height="1080" alt="Screenshot (348)" src="https://github.com/user-attachments/assets/f2faf806-5213-4e69-bae6-55c3665017ae" />
+<img width="1920" height="1080" alt="Screenshot (349)" src="https://github.com/user-attachments/assets/5bcf1f79-60b8-4c49-b783-cf034e407cab" />
+<img width="1920" height="1080" alt="Screenshot (350)" src="https://github.com/user-attachments/assets/8f83bae1-d0ae-4881-8465-a5711271cccc" />
+<img width="1920" height="1080" alt="Screenshot (354)" src="https://github.com/user-attachments/assets/dbce325c-29ef-4d91-b32c-ae47e33383fc" />
+
+
