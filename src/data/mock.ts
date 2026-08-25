@@ -1,4 +1,5 @@
-import type { Candidate, TeamMember, TeamState, SkillKey } from "../types";
+import type { Candidate, SCIPerson, SCIProject, TeamMember, TeamState, SkillKey } from "../types";
+import { calculateSCI } from "../sci";
 
 export const INITIAL_MEMBERS: TeamMember[] = [
   { id: "rahul", name: "Rahul", role: "Frontend", initials: "RS" },
@@ -96,9 +97,34 @@ export const CANDIDATE_MEMBERS: Record<string, TeamMember> = {
   dev: { id: "dev", name: "Dev Arora", role: "Backend Developer", initials: "DA" },
 };
 
+function toSCIPerson(member: TeamMember): SCIPerson {
+  const candidate = CANDIDATES.find((c) => c.id === member.id);
+  if (!candidate) {
+    return { role: member.role };
+  }
+  return {
+    role: member.role,
+    skills: candidate.skills,
+    availability: candidate.availability,
+    experience: candidate.experience,
+    interest: candidate.interest,
+  };
+}
+
+function toSCIProject(): SCIProject {
+  const project = DISCOVER_PROJECTS.find((p) => p.id === "neural-nexus");
+  if (!project) {
+    return {};
+  }
+  return {
+    requiredRoles: project.needs ? [project.needs] : [],
+    tags: project.tags,
+    description: project.description,
+  };
+}
+
 export function computeTeamState(knottedIds: string[]): TeamState {
   const coverage = { ...INITIAL_COVERAGE } as Record<SkillKey, number>;
-  let sci = INITIAL_SCI;
 
   for (const id of CANDIDATES.map((c) => c.id)) {
     if (!knottedIds.includes(id)) continue;
@@ -109,16 +135,15 @@ export function computeTeamState(knottedIds: string[]): TeamState {
     }
   }
 
-  // SCI is determined by the last knotted candidate in order
-  const orderedKnotted = CANDIDATES.filter((c) => knottedIds.includes(c.id));
-  if (orderedKnotted.length > 0) {
-    sci = orderedKnotted[orderedKnotted.length - 1].ripple.sciAfter;
-  }
-
   const members: TeamMember[] = [
     ...INITIAL_MEMBERS,
     ...knottedIds.map((id) => CANDIDATE_MEMBERS[id]).filter(Boolean),
   ];
+
+  const sci = calculateSCI(
+    { members: members.map(toSCIPerson), coverage },
+    toSCIProject()
+  );
 
   return { members, coverage, sci, knottedIds };
 }

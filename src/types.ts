@@ -36,3 +36,27 @@ export interface TeamState {
   sci: number;
   knottedIds: string[];
 }
+
+/** Input person for `calculateSCI` — compatible with `TeamMember` and `Candidate`. */
+export interface SCIPerson {
+  role: string;
+  skills?: readonly string[];
+  availability?: string;
+  experience?: string;
+  interest?: string;
+}
+
+export interface SCITeam {
+  members: readonly SCIPerson[];
+  coverage: Record<SkillKey, number>;
+}
+
+export interface SCIProject {
+  requiredRoles?: readonly string[];
+  requiredSkills?: readonly string[];
+  availability?: string;
+  experience?: string;
+  interest?: string;
+  tags?: readonly string[];
+  description?: string;
+}
