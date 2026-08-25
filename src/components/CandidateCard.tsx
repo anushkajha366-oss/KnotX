@@ -4,6 +4,13 @@ import type { Candidate } from "../types";
 import type { TeamState } from "../types";
 import RippleEffect from "./RippleEffect";
 
+function getMatchQuality(matchScore: number): string {
+  if (matchScore >= 80) return "Excellent Match";
+  if (matchScore >= 60) return "Strong Match";
+  if (matchScore >= 40) return "Potential Match";
+  return "Low Match";
+}
+
 interface CandidateCardProps {
   candidate: Candidate;
   matchScore: number;
@@ -37,6 +44,7 @@ export default function CandidateCard({
   };
 
   const alreadyKnotted = teamState.knottedIds.includes(candidate.id);
+  const matchQuality = getMatchQuality(matchScore);
 
   return (
     <div
@@ -169,7 +177,7 @@ export default function CandidateCard({
                     border: "1px solid rgba(255,95,95,0.2)",
                   }}
                 >
-                  Excellent fit
+                  {matchQuality}
                 </div>
                 <div className="text-xs" style={{ color: "#9B91A8" }}>
                   Proof Score{" "}
