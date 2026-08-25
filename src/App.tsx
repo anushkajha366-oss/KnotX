@@ -8,9 +8,10 @@ import MatchWorkspace from "./pages/MatchWorkspace";
 import Discover from "./pages/Discover";
 import CreateSearch, { type FormState } from "./pages/CreateSearch";
 import MyTeam from "./pages/MyTeam";
+import Home from "./pages/Home";
 
 export default function App() {
-  const [page, setPage] = useState<Page>("match");
+  const [page, setPage] = useState<Page>("home");
   const [knottedIds, setKnottedIds] = useState<string[]>([]);
   const [candidateIndex, setCandidateIndex] = useState(0);
   const [activeProject, setActiveProject] = useState<SCIProject | null>(null);
@@ -78,6 +79,7 @@ export default function App() {
       <Navbar page={page} setPage={setPage} memberCount={teamState.members.length} />
 
       <main>
+        {page === "home" && <Home onNavigate={setPage} />}
         {page === "match" && (
           <MatchWorkspace
             teamState={teamState}
