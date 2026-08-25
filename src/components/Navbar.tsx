@@ -27,7 +27,7 @@ export default function Navbar({ page, setPage, memberCount }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
         {/* Left: Logo */}
         <button
-          onClick={() => setPage("match")}
+          onClick={() => setPage("home")}
           className="flex items-center gap-2.5 group focus:outline-none"
           aria-label="KnotX home"
         >
