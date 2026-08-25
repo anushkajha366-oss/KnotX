@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { Page } from "./types";
+import type { Page, SCIProject } from "./types";
 import { computeTeamState, CANDIDATES } from "./data/mock";
 import Background from "./components/Background";
 import Navbar from "./components/Navbar";
@@ -19,7 +19,17 @@ export default function App() {
     message: "",
   });
 
-  const teamState = computeTeamState(knottedIds);
+  const activeSCIProject: SCIProject | undefined = activeProject
+    ? {
+        requiredRoles: activeProject.rolesNeeded,
+        requiredSkills: activeProject.skills,
+        availability: activeProject.availability,
+        experience: activeProject.experience,
+        description: activeProject.description,
+      }
+    : undefined;
+
+  const teamState = computeTeamState(knottedIds, activeSCIProject);
 
   const showToast = useCallback((message: string) => {
     setToast({ visible: true, message });
