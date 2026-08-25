@@ -223,6 +223,7 @@ function ProjectCard({
       <button
         onClick={() =>
           onViewMatch({
+            name: project.name,
             requiredRoles: project.needs ? [project.needs] : [],
             tags: project.tags,
             description: project.description,
