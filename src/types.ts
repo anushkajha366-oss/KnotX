@@ -52,6 +52,7 @@ export interface SCITeam {
 }
 
 export interface SCIProject {
+  name?: string;
   requiredRoles?: readonly string[];
   requiredSkills?: readonly string[];
   availability?: string;
