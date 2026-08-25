@@ -16,6 +16,12 @@ export const INITIAL_COVERAGE: Record<SkillKey, number> = {
 
 export const INITIAL_SCI = 68;
 
+const INITIAL_MEMBER_COVERAGE: Record<string, Partial<Record<SkillKey, number>>> = {
+  rahul: { Frontend: 80 },
+  aryan: { Backend: 90 },
+  anushka: { "AI / ML": 40 },
+};
+
 export const CANDIDATES: Candidate[] = [
   {
     id: "ananya",
@@ -125,9 +131,21 @@ function toSCIProject(): SCIProject {
 
 export function computeTeamState(
   knottedIds: string[],
-  project: SCIProject = toSCIProject()
+  project: SCIProject = toSCIProject(),
+  initialMembers: TeamMember[] = INITIAL_MEMBERS
 ): TeamState {
-  const coverage = { ...INITIAL_COVERAGE } as Record<SkillKey, number>;
+  const coverage = {
+    Frontend: 0,
+    Backend: 0,
+    "AI / ML": 0,
+    Design: 0,
+  } as Record<SkillKey, number>;
+
+  for (const member of initialMembers) {
+    for (const [skill, value] of Object.entries(INITIAL_MEMBER_COVERAGE[member.id] ?? {})) {
+      coverage[skill as SkillKey] = Math.max(coverage[skill as SkillKey], value as number);
+    }
+  }
 
   for (const id of CANDIDATES.map((c) => c.id)) {
     if (!knottedIds.includes(id)) continue;
@@ -139,7 +157,7 @@ export function computeTeamState(
   }
 
   const members: TeamMember[] = [
-    ...INITIAL_MEMBERS,
+    ...initialMembers,
     ...knottedIds.map((id) => CANDIDATE_MEMBERS[id]).filter(Boolean),
   ];
 
@@ -173,6 +191,67 @@ export function rankCandidates(
         b.candidate.proofScore - a.candidate.proofScore ||
         a.candidate.id.localeCompare(b.candidate.id)
     );
+}
+
+export interface ReserveCandidate extends RankedCandidate {
+  resultingSCI: number;
+  fillsRole: boolean;
+  relevantSkills: string[];
+}
+
+export function rankReserveCandidates(
+  unavailableMember: TeamMember,
+  knottedIds: string[],
+  initialMembers: TeamMember[],
+  project: SCIProject = toSCIProject()
+): ReserveCandidate[] {
+  const remainingInitialMembers = initialMembers.filter((member) => member.id !== unavailableMember.id);
+  const remainingKnottedIds = knottedIds.filter((id) => id !== unavailableMember.id);
+  const teamIds = new Set([
+    ...remainingInitialMembers.map((member) => member.id),
+    ...remainingKnottedIds,
+  ]);
+
+  return CANDIDATES
+    .filter((candidate) => candidate.id !== unavailableMember.id && !teamIds.has(candidate.id))
+    .map((candidate) => {
+      const nextState = computeTeamState(
+        [...remainingKnottedIds, candidate.id],
+        project,
+        remainingInitialMembers
+      );
+      const relevantSkills = candidate.skills.filter((skill) =>
+        (project.requiredSkills ?? []).some((required) => labelsMatch(skill, required)) ||
+        (project.tags ?? []).some((tag) => labelsMatch(skill, tag))
+      );
+
+      return {
+        candidate,
+        matchScore: nextState.sci,
+        resultingSCI: nextState.sci,
+        fillsRole: reserveFillsRole(candidate, unavailableMember),
+        relevantSkills,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.resultingSCI - a.resultingSCI ||
+        Number(b.fillsRole) - Number(a.fillsRole) ||
+        b.relevantSkills.length - a.relevantSkills.length ||
+        b.candidate.proofScore - a.candidate.proofScore ||
+        a.candidate.id.localeCompare(b.candidate.id)
+    );
+}
+
+function reserveFillsRole(candidate: Candidate, unavailableMember: TeamMember): boolean {
+  if (labelsMatch(candidate.role, unavailableMember.role)) return true;
+
+  const candidateLabel = `${candidate.role} ${candidate.skills.join(" ")}`.toLowerCase();
+  const role = unavailableMember.role.toLowerCase();
+  return (
+    (role.includes("ai") || role.includes("ml")) &&
+    (candidateLabel.includes("ai") || candidateLabel.includes("ml") || candidateLabel.includes("tensorflow"))
+  );
 }
 
 function labelsMatch(a: string, b: string): boolean {

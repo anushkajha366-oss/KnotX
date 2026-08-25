@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import type { Page, SCIProject } from "./types";
-import { computeTeamState, CANDIDATES } from "./data/mock";
+import type { Page, SCIProject, TeamMember } from "./types";
+import { computeTeamState, CANDIDATES, INITIAL_MEMBERS } from "./data/mock";
 import Background from "./components/Background";
 import Navbar from "./components/Navbar";
 import Toast from "./components/Toast";
@@ -13,6 +13,7 @@ import Home from "./pages/Home";
 export default function App() {
   const [page, setPage] = useState<Page>("home");
   const [knottedIds, setKnottedIds] = useState<string[]>([]);
+  const [initialMembers, setInitialMembers] = useState<TeamMember[]>(INITIAL_MEMBERS);
   const [candidateIndex, setCandidateIndex] = useState(0);
   const [activeProject, setActiveProject] = useState<SCIProject | null>(null);
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({
@@ -20,7 +21,7 @@ export default function App() {
     message: "",
   });
 
-  const teamState = computeTeamState(knottedIds, activeProject ?? undefined);
+  const teamState = computeTeamState(knottedIds, activeProject ?? undefined, initialMembers);
 
   const showToast = useCallback((message: string) => {
     setToast({ visible: true, message });
@@ -49,8 +50,19 @@ export default function App() {
 
   const handleReset = useCallback(() => {
     setKnottedIds([]);
+    setInitialMembers(INITIAL_MEMBERS);
     setCandidateIndex(0);
   }, []);
+
+  const handleSwitch = useCallback((unavailableId: string, reserveId: string) => {
+    setInitialMembers((members) => members.filter((member) => member.id !== unavailableId));
+    setKnottedIds((ids) => [
+      ...ids.filter((id) => id !== unavailableId && id !== reserveId),
+      reserveId,
+    ]);
+    const reserve = CANDIDATES.find((candidate) => candidate.id === reserveId);
+    showToast(`${reserve?.name.split(" ")[0] ?? "Reserve"} has been switched into your team.`);
+  }, [showToast]);
 
   const handleAnalyze = useCallback((project: FormState) => {
     setKnottedIds([]);
@@ -94,7 +106,14 @@ export default function App() {
         )}
         {page === "discover" && <Discover onViewMatch={handleViewMatch} />}
         {page === "create" && <CreateSearch onAnalyze={handleAnalyze} />}
-        {page === "team" && <MyTeam teamState={teamState} activeProject={activeProject ?? undefined} />}
+        {page === "team" && (
+          <MyTeam
+            teamState={teamState}
+            activeProject={activeProject ?? undefined}
+            initialMembers={initialMembers}
+            onSwitch={handleSwitch}
+          />
+        )}
       </main>
 
       <Toast

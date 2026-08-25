@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { ArrowLeft, Printer, Shield, TrendingUp, AlertTriangle, Sparkles } from "lucide-react";
-import type { SCIProject, TeamState, SkillKey } from "../types";
-import { getBiggestGap, getCriticalGap } from "../data/mock";
+import { ArrowLeft, Printer, Shield, TrendingUp, AlertTriangle, Sparkles, UserRoundX, ArrowRightLeft } from "lucide-react";
+import type { SCIProject, TeamState, SkillKey, TeamMember } from "../types";
+import { computeTeamState, getBiggestGap, getCriticalGap, rankReserveCandidates } from "../data/mock";
 import SkillBar from "../components/SkillBar";
 
 interface MyTeamProps {
   teamState: TeamState;
   activeProject?: SCIProject;
+  initialMembers: TeamMember[];
+  onSwitch: (unavailableId: string, reserveId: string) => void;
 }
 
 const SKILL_KEYS: SkillKey[] = ["Frontend", "Backend", "AI / ML", "Design"];
@@ -38,14 +40,30 @@ const MEMBER_SKILLS: Record<string, string[]> = {
   dev: ["Node.js", "APIs", "PostgreSQL"],
 };
 
-export default function MyTeam({ teamState, activeProject }: MyTeamProps) {
+export default function MyTeam({ teamState, activeProject, initialMembers, onSwitch }: MyTeamProps) {
   const [deckOpen, setDeckOpen] = useState(false);
+  const [benchOpen, setBenchOpen] = useState(false);
+  const [unavailableId, setUnavailableId] = useState<string | null>(null);
   const gap = getBiggestGap(teamState.coverage);
   const projectName = activeProject?.name ?? "Neural Nexus";
   const projectDescription = activeProject?.description ?? "A product-minded team building accessible learning tools.";
   const sci = teamState.sci;
   const sciColor = sci >= 90 ? "#7EF0C5" : sci >= 75 ? "#C084FC" : "#FF5F5F";
   const knotted = teamState.knottedIds;
+  const unavailableMember = teamState.members.find((member) => member.id === unavailableId);
+  const stateWithoutMember = unavailableMember
+    ? computeTeamState(
+        knotted.filter((id) => id !== unavailableMember.id),
+        activeProject,
+        initialMembers.filter((member) => member.id !== unavailableMember.id)
+      )
+    : null;
+  const coverageDrops = stateWithoutMember
+    ? SKILL_KEYS.filter((skill) => stateWithoutMember.coverage[skill] < teamState.coverage[skill])
+    : [];
+  const reserves = unavailableMember
+    ? rankReserveCandidates(unavailableMember, knotted, initialMembers, activeProject)
+    : [];
 
   if (deckOpen) {
     return (
@@ -125,6 +143,28 @@ export default function MyTeam({ teamState, activeProject }: MyTeamProps) {
                   }}
                 />
               </div>
+            </div>
+
+            <div
+              className="rounded-2xl p-6 space-y-3"
+              style={{ background: "rgba(255,95,95,0.05)", border: "1px solid rgba(255,95,95,0.16)" }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,95,95,0.1)", color: "#FF5F5F" }}>
+                  <UserRoundX size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold" style={{ color: "#FFF7E8" }}>Bench &amp; Switch</h3>
+                  <p className="text-xs" style={{ color: "#9B91A8" }}>Replace an unavailable teammate with the best reserve fit.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setBenchOpen(true)}
+                className="w-full py-2.5 rounded-xl text-xs font-bold transition-colors"
+                style={{ background: "rgba(255,95,95,0.12)", border: "1px solid rgba(255,95,95,0.25)", color: "#FF5F5F" }}
+              >
+                Open Bench &amp; Switch
+              </button>
             </div>
 
             {/* Skill coverage */}
@@ -327,6 +367,78 @@ export default function MyTeam({ teamState, activeProject }: MyTeamProps) {
           </div>
         </div>
       </div>
+
+      {benchOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-8" style={{ background: "rgba(12,9,18,0.82)", backdropFilter: "blur(8px)" }}>
+          <div className="max-w-3xl mx-auto rounded-3xl p-6 sm:p-8 space-y-6" style={{ background: "#211A2D", border: "1px solid rgba(192,132,252,0.25)" }}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold tracking-widest uppercase mb-2" style={{ color: "#FF5F5F" }}>Team continuity</p>
+                <h2 className="text-2xl font-bold" style={{ color: "#FFF7E8" }}>Bench &amp; Switch</h2>
+                <p className="text-sm mt-2" style={{ color: "#9B91A8" }}>Choose who is unavailable, then switch in a ranked reserve candidate.</p>
+              </div>
+              <button onClick={() => { setBenchOpen(false); setUnavailableId(null); }} className="text-sm font-semibold" style={{ color: "#9B91A8" }}>Close</button>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "#9B91A8" }}>1. Current team — select unavailable member</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {teamState.members.map((member) => (
+                  <button
+                    key={member.id}
+                    onClick={() => setUnavailableId(member.id)}
+                    className="text-left rounded-xl p-4 transition-colors"
+                    style={{ background: unavailableId === member.id ? "rgba(255,95,95,0.13)" : "rgba(255,247,232,0.04)", border: `1px solid ${unavailableId === member.id ? "rgba(255,95,95,0.45)" : "rgba(255,247,232,0.08)"}` }}
+                  >
+                    <p className="text-sm font-bold" style={{ color: "#FFF7E8" }}>{member.name}</p>
+                    <p className="text-xs mt-1" style={{ color: "#9B91A8" }}>{member.role}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {unavailableMember && stateWithoutMember && (
+              <>
+                <div className="rounded-2xl p-5" style={{ background: "rgba(255,95,95,0.07)", border: "1px solid rgba(255,95,95,0.2)" }}>
+                  <p className="text-[10px] font-bold tracking-widest uppercase mb-2" style={{ color: "#FF5F5F" }}>2. Gap opened</p>
+                  <p className="text-sm font-semibold" style={{ color: "#FFF7E8" }}>{unavailableMember.role} is now an open role.</p>
+                  <p className="text-xs mt-1" style={{ color: "#9B91A8" }}>
+                    {coverageDrops.length > 0 ? `${coverageDrops.join(" and ")} coverage would drop without this teammate.` : "Review the reserve pool to protect project coverage and SCI."}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: "#9B91A8" }}>3. Reserve pool — ranked for this switch</p>
+                  <div className="space-y-3">
+                    {reserves.map(({ candidate, resultingSCI, fillsRole, relevantSkills }) => (
+                      <div key={candidate.id} className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4" style={{ background: "rgba(255,247,232,0.04)", border: "1px solid rgba(255,247,232,0.09)" }}>
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-base font-bold" style={{ color: "#FFF7E8" }}>{candidate.name}</p>
+                            {fillsRole && <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "rgba(126,240,197,0.1)", color: "#7EF0C5" }}>Role match</span>}
+                          </div>
+                          <p className="text-xs mt-1" style={{ color: "#9B91A8" }}>{candidate.role} · {candidate.availability}</p>
+                          <div className="flex flex-wrap gap-1.5 mt-3">
+                            {candidate.skills.map((skill) => <span key={skill} className="px-2 py-0.5 rounded-full text-[10px]" style={{ background: relevantSkills.includes(skill) ? "rgba(192,132,252,0.16)" : "rgba(255,247,232,0.06)", color: relevantSkills.includes(skill) ? "#C084FC" : "#9B91A8" }}>{skill}</span>)}
+                          </div>
+                          <p className="text-xs mt-3" style={{ color: "#7EF0C5" }}>Resulting team SCI: <strong>{resultingSCI}</strong> / 100</p>
+                        </div>
+                        <button
+                          onClick={() => { onSwitch(unavailableMember.id, candidate.id); setBenchOpen(false); setUnavailableId(null); }}
+                          className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold"
+                          style={{ background: "rgba(192,132,252,0.16)", border: "1px solid rgba(192,132,252,0.3)", color: "#C084FC" }}
+                        >
+                          <ArrowRightLeft size={14} /> Switch In
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
