@@ -151,6 +151,70 @@ export function computeTeamState(
   return { members, coverage, sci, knottedIds };
 }
 
+
+export interface RankedCandidate {
+  candidate: Candidate;
+  matchScore: number;
+}
+
+export function rankCandidates(
+  knottedIds: string[],
+  project: SCIProject = toSCIProject()
+): RankedCandidate[] {
+  return CANDIDATES
+    .filter((candidate) => !knottedIds.includes(candidate.id))
+    .map((candidate) => ({
+      candidate,
+      matchScore: computeTeamState([...knottedIds, candidate.id], project).sci,
+    }))
+    .sort(
+      (a, b) =>
+        b.matchScore - a.matchScore ||
+        b.candidate.proofScore - a.candidate.proofScore ||
+        a.candidate.id.localeCompare(b.candidate.id)
+    );
+}
+
+function labelsMatch(a: string, b: string): boolean {
+  const left = a.toLowerCase().trim();
+  const right = b.toLowerCase().trim();
+  return left === right || left.includes(right) || right.includes(left);
+}
+
+export function getCriticalGap(
+  members: TeamMember[],
+  coverage: Record<SkillKey, number>,
+  project?: SCIProject
+): { label: string; insight: string } {
+  for (const role of project?.requiredRoles ?? []) {
+    if (!members.some((member) => labelsMatch(role, member.role))) {
+      return {
+        label: role,
+        insight: `This project needs a ${role}.`,
+      };
+    }
+  }
+
+  for (const skill of project?.requiredSkills ?? []) {
+    const isCovered = members.some((member) => {
+      const person = toSCIPerson(member);
+      return (
+        person.skills?.some((memberSkill) => labelsMatch(skill, memberSkill)) ||
+        labelsMatch(skill, person.role)
+      );
+    });
+    if (!isCovered) {
+      return {
+        label: skill,
+        insight: `This project needs ${skill} expertise.`,
+      };
+    }
+  }
+
+  const gap = getBiggestGap(coverage);
+  return { label: gap.label, insight: gap.insight };
+}
+
 export function getBiggestGap(coverage: Record<SkillKey, number>): {
   skill: SkillKey;
   value: number;
