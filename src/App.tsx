@@ -13,23 +13,13 @@ export default function App() {
   const [page, setPage] = useState<Page>("match");
   const [knottedIds, setKnottedIds] = useState<string[]>([]);
   const [candidateIndex, setCandidateIndex] = useState(0);
-  const [activeProject, setActiveProject] = useState<FormState | null>(null);
+  const [activeProject, setActiveProject] = useState<SCIProject | null>(null);
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({
     visible: false,
     message: "",
   });
 
-  const activeSCIProject: SCIProject | undefined = activeProject
-    ? {
-        requiredRoles: activeProject.rolesNeeded,
-        requiredSkills: activeProject.skills,
-        availability: activeProject.availability,
-        experience: activeProject.experience,
-        description: activeProject.description,
-      }
-    : undefined;
-
-  const teamState = computeTeamState(knottedIds, activeSCIProject);
+  const teamState = computeTeamState(knottedIds, activeProject ?? undefined);
 
   const showToast = useCallback((message: string) => {
     setToast({ visible: true, message });
@@ -62,6 +52,17 @@ export default function App() {
   }, []);
 
   const handleAnalyze = useCallback((project: FormState) => {
+    setActiveProject({
+      requiredRoles: project.rolesNeeded,
+      requiredSkills: project.skills,
+      availability: project.availability,
+      experience: project.experience,
+      description: project.description,
+    });
+    setPage("match");
+  }, []);
+
+  const handleViewMatch = useCallback((project: SCIProject) => {
     setActiveProject(project);
     setPage("match");
   }, []);
@@ -83,7 +84,7 @@ export default function App() {
             onViewTeam={() => setPage("team")}
           />
         )}
-        {page === "discover" && <Discover />}
+        {page === "discover" && <Discover onViewMatch={handleViewMatch} />}
         {page === "create" && <CreateSearch onAnalyze={handleAnalyze} />}
         {page === "team" && <MyTeam teamState={teamState} />}
       </main>
