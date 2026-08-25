@@ -1,4 +1,4 @@
-export type Page = "match" | "discover" | "create" | "team";
+export type Page = "home" | "match" | "discover" | "create" | "team";
 
 export type SkillKey = "Frontend" | "Backend" | "AI / ML" | "Design";
 
