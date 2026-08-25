@@ -1,7 +1,8 @@
 {
-  "description": "Streamline your workflow with an intuitive platform designed to enhance productivity and simplify task management for professionals.",
+  "title": "KnotX - Intelligent Team Synergy & SCI Platform",
+  "description": "Build high-performing teams based on Skill Complementarity Index (SCI), role fit, and predictive synergy with KnotX.",
   "robots": {
-    "index": false
+    "index": true
   },
   "accessibility": {
     "addBypassLinks": false,
